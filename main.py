@@ -3,11 +3,18 @@
 import asyncio
 import logging
 import os
-from collections.abc import Awaitable
+from collections.abc import Awaitable, Callable
+from typing import TypeVar
 
 from aiogram import Bot, Dispatcher, F, Router
+from aiogram.client.session.aiohttp import AiohttpSession
 from aiogram.enums import ChatType
-from aiogram.exceptions import TelegramAPIError
+from aiogram.exceptions import (
+    TelegramAPIError,
+    TelegramNetworkError,
+    TelegramRetryAfter,
+    TelegramServerError,
+)
 from aiogram.filters import Command, CommandStart
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
@@ -58,6 +65,33 @@ MENU = ReplyKeyboardMarkup(
 router = Router()
 router.message.filter(F.chat.type == ChatType.PRIVATE)
 logger = logging.getLogger(__name__)
+
+T = TypeVar("T")
+
+
+async def retry_telegram_call(label: str, operation: Callable[[], Awaitable[T]]) -> T:
+    """Keep one bot process alive through transient Telegram startup failures.
+
+    Respect Telegram-provided flood-control delays; never retry authentication
+    failures, bad requests, or other permanent Telegram API errors.
+    """
+    delay = 5
+    while True:
+        try:
+            return await operation()
+        except TelegramRetryAfter as exc:
+            wait = max(1, exc.retry_after + 1)
+            logger.warning("Telegram rate-limited %s; retrying in %s seconds", label, wait)
+        except (TelegramNetworkError, TelegramServerError) as exc:
+            wait = delay
+            delay = min(delay * 2, 120)
+            logger.warning(
+                "Telegram %s request failed (%s); retrying in %s seconds",
+                label,
+                type(exc).__name__,
+                wait,
+            )
+        await asyncio.sleep(wait)
 
 
 class WorkState(StatesGroup):
@@ -181,8 +215,8 @@ async def main() -> None:
     dp = Dispatcher(storage=MemoryStorage())
     dp.include_router(router)
 
-    async with Bot(token=token) as bot:
-        identity = await bot.get_me()
+    async with Bot(token=token, session=AiohttpSession(timeout=60)) as bot:
+        identity = await retry_telegram_call("getMe", bot.get_me)
         if (identity.username or "").casefold() != BOT_USERNAME.casefold():
             raise RuntimeError(
                 "This token belongs to @"
@@ -192,7 +226,9 @@ async def main() -> None:
                 + ". Refusing to modify another bot."
             )
 
-        await bot.delete_webhook(drop_pending_updates=False)
+        await retry_telegram_call(
+            "deleteWebhook", lambda: bot.delete_webhook(drop_pending_updates=False)
+        )
         await configure_bot(bot)
         logger.info("GK9 polling started as @%s", identity.username)
         await dp.start_polling(bot, close_bot_session=False)

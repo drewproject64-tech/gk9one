@@ -59,5 +59,55 @@ class TextToolsTests(unittest.TestCase):
         )
 
 
+
+from unittest.mock import AsyncMock, patch
+
+from aiogram.exceptions import TelegramNetworkError, TelegramRetryAfter, TelegramUnauthorizedError
+from aiogram.methods import GetMe
+from main import retry_telegram_call
+
+
+class StartupRetryTests(unittest.IsolatedAsyncioTestCase):
+    async def test_timeout_then_success(self):
+        op = AsyncMock(side_effect=[
+            TelegramNetworkError(method=GetMe(), message="timeout"),
+            "connected",
+        ])
+        with patch("main.asyncio.sleep", new_callable=AsyncMock) as sleep:
+            self.assertEqual(await retry_telegram_call("getMe", op), "connected")
+            sleep.assert_awaited_once_with(5)
+            self.assertEqual(op.await_count, 2)
+
+    async def test_respects_flood_control(self):
+        op = AsyncMock(side_effect=[
+            TelegramRetryAfter(method=GetMe(), message="Too Many Requests", retry_after=27),
+            "connected",
+        ])
+        with patch("main.asyncio.sleep", new_callable=AsyncMock) as sleep:
+            self.assertEqual(await retry_telegram_call("getMe", op), "connected")
+            sleep.assert_awaited_once_with(28)
+
+    async def test_exponential_delay_for_outage(self):
+        op = AsyncMock(side_effect=[
+            TelegramNetworkError(method=GetMe(), message="timeout"),
+            TelegramNetworkError(method=GetMe(), message="timeout"),
+            TelegramNetworkError(method=GetMe(), message="timeout"),
+            "connected",
+        ])
+        with patch("main.asyncio.sleep", new_callable=AsyncMock) as sleep:
+            self.assertEqual(await retry_telegram_call("getMe", op), "connected")
+            self.assertEqual(
+                [call.args[0] for call in sleep.await_args_list], [5, 10, 20]
+            )
+
+    async def test_invalid_token_fails_without_retry(self):
+        op = AsyncMock(side_effect=TelegramUnauthorizedError(
+            method=GetMe(), message="Unauthorized"
+        ))
+        with patch("main.asyncio.sleep", new_callable=AsyncMock) as sleep:
+            with self.assertRaises(TelegramUnauthorizedError):
+                await retry_telegram_call("getMe", op)
+            sleep.assert_not_awaited()
+
 if __name__ == "__main__":
     unittest.main()
