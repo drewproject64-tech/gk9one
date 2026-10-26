@@ -1,0 +1,12 @@
+services:
+  - type: worker
+    name: gk9-telegram-bot
+    runtime: python
+    plan: starter
+    buildCommand: pip install -r requirements.txt
+    startCommand: python main.py
+    envVars:
+      - key: BOT_TOKEN
+        sync: false
+      - key: PYTHONUNBUFFERED
+        value: "1"
