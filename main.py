@@ -20,7 +20,7 @@ from aiogram.filters import Command, CommandStart
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.fsm.storage.memory import MemoryStorage
-from aiogram.types import BotCommand, FSInputFile, Message, ReplyKeyboardRemove
+from aiogram.types import BotCommand, FSInputFile, InlineKeyboardButton, InlineKeyboardMarkup, Message
 
 from text_tools import MAX_INPUT_LENGTH, process_text
 
@@ -66,15 +66,38 @@ SYARIKAT_WELCOME = (
     "⭐️ DI BAWAH NAUNGAN 4DGANG GROUP\n\n"
     "⬇️ PILIH JENAMA KEGEMARAN ANDA DI BAWAH! ⬇️"
 )
-SYARIKAT_BRANDS = (
-    "MY.CASH88\n"
-    "https://mycash88.com/RFTELEGRAMADS\n\n"
-    "GK9\n"
-    "https://gk9gk9.com/RFTELEGRAMADS\n\n"
-    "LUCKYEGG88\n"
-    "https://luckyegg88.com/RFTELEGRAMADS\n\n"
-    "MAHKOTA8\n"
-    "https://mkt8.vip/RFTELEGRAMADS1"
+# Inline URL buttons attached to the welcome photo (not a reply keyboard).
+BRAND_KEYBOARD = InlineKeyboardMarkup(
+    inline_keyboard=[
+        [
+            InlineKeyboardButton(
+                text="MY.CASH88",
+                url="https://mycash88.com/RFTELEGRAMADS",
+            ),
+            InlineKeyboardButton(
+                text="GK9",
+                url="https://gk9gk9.com/RFTELEGRAMADS",
+            ),
+        ],
+        [
+            InlineKeyboardButton(
+                text="LUCKYEGG88",
+                url="https://luckyegg88.com/RFTELEGRAMADS",
+            ),
+            InlineKeyboardButton(
+                text="MAHKOTA8",
+                url="https://mkt8.vip/RFTELEGRAMADS1",
+            ),
+        ],
+        [
+            # No separate referral destination was provided: use Telegram's
+            # native sharing flow to share this bot with a contact.
+            InlineKeyboardButton(
+                text="🦋 Share & Untung 🦋",
+                url="https://t.me/share/url?url=https%3A%2F%2Ft.me%2FGK9Tool_BOT",
+            ),
+        ],
+    ]
 )
 
 router = Router()
@@ -117,20 +140,19 @@ class WorkState(StatesGroup):
 async def start(message: Message, state: FSMContext) -> None:
     await state.clear()
 
-    # First message: welcome image and caption. If the image has not yet
-    # been uploaded to the repository, send the caption as text instead.
+    # One welcome post: photo, caption, and inline buttons attached beneath.
     if WELCOME_IMAGE.is_file():
         await message.answer_photo(
             photo=FSInputFile(WELCOME_IMAGE),
             caption=SYARIKAT_WELCOME,
-            reply_markup=ReplyKeyboardRemove(),
+            reply_markup=BRAND_KEYBOARD,
         )
     else:
         logger.warning("Welcome image missing: %s", WELCOME_IMAGE)
-        await message.answer(SYARIKAT_WELCOME, reply_markup=ReplyKeyboardRemove())
-
-    # Second message: the four exact brand destinations requested.
-    await message.answer(SYARIKAT_BRANDS)
+        await message.answer(
+            SYARIKAT_WELCOME,
+            reply_markup=BRAND_KEYBOARD,
+        )
 
 
 @router.message(Command("help"))
@@ -210,15 +232,7 @@ async def safely_apply(label: str, operation: Awaitable[bool]) -> None:
 
 
 async def configure_bot(bot: Bot) -> None:
-    await safely_apply("name", bot.set_my_name(name=BOT_NAME))
-    await safely_apply(
-        "About / short description",
-        bot.set_my_short_description(short_description=BOT_ABOUT),
-    )
-    await safely_apply(
-        "description",
-        bot.set_my_description(description=BOT_DESCRIPTION),
-    )
+    # Do not modify the existing bot name, About, or description in Telegram.
     await safely_apply(
         "commands",
         bot.set_my_commands(
@@ -230,7 +244,6 @@ async def configure_bot(bot: Bot) -> None:
             ]
         ),
     )
-
 
 async def main() -> None:
     token = os.environ.get("BOT_TOKEN", "").strip()
