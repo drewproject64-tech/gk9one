@@ -20,7 +20,7 @@ from aiogram.filters import Command, CommandStart
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.fsm.storage.memory import MemoryStorage
-from aiogram.types import BotCommand, FSInputFile, KeyboardButton, Message, ReplyKeyboardMarkup
+from aiogram.types import BotCommand, FSInputFile, KeyboardButton, Message, ReplyKeyboardMarkup, WebAppInfo
 
 from text_tools import MAX_INPUT_LENGTH, process_text
 
@@ -67,8 +67,8 @@ SYARIKAT_WELCOME = (
     "⬇️ PILIH JENAMA KEGEMARAN ANDA DI BAWAH! ⬇️"
 )
 # Persistent reply keyboard shown underneath Telegram's message input.
-# Telegram reply keyboard buttons send text to the bot; they cannot directly
-# open URLs. The handler below responds with the chosen clickable link.
+# A web_app reply keyboard button launches its HTTPS destination in
+# Telegram's Web App view. The fallback text handler supports typed brand names.
 BRAND_LINKS = {
     "MY.CASH88": "https://mycash88.com/RFTELEGRAMADS",
     "GK9": "https://gk9gk9.com/RFTELEGRAMADS",
@@ -77,8 +77,26 @@ BRAND_LINKS = {
 }
 BRAND_MENU = ReplyKeyboardMarkup(
     keyboard=[
-        [KeyboardButton(text="MY.CASH88"), KeyboardButton(text="GK9")],
-        [KeyboardButton(text="LUCKYEGG88"), KeyboardButton(text="MAHKOTA8")],
+        [
+            KeyboardButton(
+                text="MY.CASH88",
+                web_app=WebAppInfo(url=BRAND_LINKS["MY.CASH88"]),
+            ),
+            KeyboardButton(
+                text="GK9",
+                web_app=WebAppInfo(url=BRAND_LINKS["GK9"]),
+            ),
+        ],
+        [
+            KeyboardButton(
+                text="LUCKYEGG88",
+                web_app=WebAppInfo(url=BRAND_LINKS["LUCKYEGG88"]),
+            ),
+            KeyboardButton(
+                text="MAHKOTA8",
+                web_app=WebAppInfo(url=BRAND_LINKS["MAHKOTA8"]),
+            ),
+        ],
     ],
     resize_keyboard=True,
     is_persistent=True,
