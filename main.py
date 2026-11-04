@@ -89,14 +89,6 @@ BRAND_KEYBOARD = InlineKeyboardMarkup(
                 url="https://mkt8.vip/RFTELEGRAMADS1",
             ),
         ],
-        [
-            # No separate referral destination was provided: use Telegram's
-            # native sharing flow to share this bot with a contact.
-            InlineKeyboardButton(
-                text="🦋 Share & Untung 🦋",
-                url="https://t.me/share/url?url=https%3A%2F%2Ft.me%2FGK9Tool_BOT",
-            ),
-        ],
     ]
 )
 
