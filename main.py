@@ -20,7 +20,7 @@ from aiogram.filters import Command, CommandStart
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.fsm.storage.memory import MemoryStorage
-from aiogram.types import BotCommand, FSInputFile, KeyboardButton, Message, ReplyKeyboardMarkup, WebAppInfo
+from aiogram.types import BotCommand, FSInputFile, InlineKeyboardButton, InlineKeyboardMarkup, Message
 
 from text_tools import MAX_INPUT_LENGTH, process_text
 
@@ -66,41 +66,24 @@ SYARIKAT_WELCOME = (
     "⭐️ DI BAWAH NAUNGAN 4DGANG GROUP\n\n"
     "⬇️ PILIH JENAMA KEGEMARAN ANDA DI BAWAH! ⬇️"
 )
-# Persistent reply keyboard shown underneath Telegram's message input.
-# A web_app reply keyboard button launches its HTTPS destination in
-# Telegram's Web App view. The fallback text handler supports typed brand names.
+# Inline URL buttons displayed directly beneath the first welcome photo.
 BRAND_LINKS = {
     "MY.CASH88": "https://mycash88.com/RFTELEGRAMADS",
     "GK9": "https://gk9gk9.com/RFTELEGRAMADS",
     "LUCKYEGG88": "https://luckyegg88.com/RFTELEGRAMADS",
     "MAHKOTA8": "https://mkt8.vip/RFTELEGRAMADS1",
 }
-BRAND_MENU = ReplyKeyboardMarkup(
-    keyboard=[
+BRAND_MENU = InlineKeyboardMarkup(
+    inline_keyboard=[
         [
-            KeyboardButton(
-                text="MY.CASH88",
-                web_app=WebAppInfo(url=BRAND_LINKS["MY.CASH88"]),
-            ),
-            KeyboardButton(
-                text="GK9",
-                web_app=WebAppInfo(url=BRAND_LINKS["GK9"]),
-            ),
+            InlineKeyboardButton(text="MY.CASH88", url=BRAND_LINKS["MY.CASH88"]),
+            InlineKeyboardButton(text="GK9", url=BRAND_LINKS["GK9"]),
         ],
         [
-            KeyboardButton(
-                text="LUCKYEGG88",
-                web_app=WebAppInfo(url=BRAND_LINKS["LUCKYEGG88"]),
-            ),
-            KeyboardButton(
-                text="MAHKOTA8",
-                web_app=WebAppInfo(url=BRAND_LINKS["MAHKOTA8"]),
-            ),
+            InlineKeyboardButton(text="LUCKYEGG88", url=BRAND_LINKS["LUCKYEGG88"]),
+            InlineKeyboardButton(text="MAHKOTA8", url=BRAND_LINKS["MAHKOTA8"]),
         ],
-    ],
-    resize_keyboard=True,
-    is_persistent=True,
-    input_field_placeholder="Pilih jenama anda",
+    ]
 )
 
 router = Router()
@@ -143,8 +126,7 @@ class WorkState(StatesGroup):
 async def start(message: Message, state: FSMContext) -> None:
     await state.clear()
 
-    # The reply keyboard displays underneath the chat input, rather than
-    # being attached as inline URL buttons on the welcome photo.
+    # URL buttons are attached to the welcome photo, not the chat input.
     if WELCOME_IMAGE.is_file():
         await message.answer_photo(
             photo=FSInputFile(WELCOME_IMAGE),
@@ -182,18 +164,6 @@ async def about_command(message: Message, state: FSMContext) -> None:
 async def cancel(message: Message, state: FSMContext) -> None:
     await state.clear()
     await message.answer("Tool cancelled. Type Change Case, Count Words, or Clean Text.")
-
-
-@router.message(F.text.in_(BRAND_LINKS))
-async def open_brand(message: Message, state: FSMContext) -> None:
-    # Brand choices work even when a text tool was previously selected.
-    await state.clear()
-    brand = message.text
-    await message.answer(
-        f"{brand}\n{BRAND_LINKS[brand]}",
-        reply_markup=BRAND_MENU,
-        disable_web_page_preview=True,
-    )
 
 
 @router.message(F.text.in_(TOOLS))
