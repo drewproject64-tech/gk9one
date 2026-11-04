@@ -64,7 +64,7 @@ MENU = ReplyKeyboardMarkup(
 )
 
 # Upload the supplied welcome image to assets/welcome.jpg in this repository.
-WELCOME_IMAGE = Path(__file__).resolve().parent / "assets" / "welcome.jpg"
+WELCOME_IMAGE = Path(__file__).resolve().parent / "welcome.jpg"
 SYARIKAT_WELCOME = (
     "💝✋👩👩‍💼✖️ 😏🙂‍↕️😰😥\n\n"
     "WELCOME TO SYARIKAT MY\n\n"
