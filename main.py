@@ -20,7 +20,7 @@ from aiogram.filters import Command, CommandStart
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.fsm.storage.memory import MemoryStorage
-from aiogram.types import BotCommand, FSInputFile, KeyboardButton, Message, ReplyKeyboardMarkup
+from aiogram.types import BotCommand, FSInputFile, Message, ReplyKeyboardRemove
 
 from text_tools import MAX_INPUT_LENGTH, process_text
 
@@ -46,24 +46,14 @@ TOOLS = (CHANGE_CASE, COUNT_WORDS, CLEAN_TEXT)
 
 WELCOME = (
     "Welcome to GK9 Text Tools!\n\n"
-    "Choose one of the three tools below:\n"
+    "Choose a text tool by typing its name:\n"
     "Change Case - uppercase, lowercase, and title case.\n"
     "Count Words - word, character, and line counts.\n"
     "Clean Text - remove extra spaces and blank lines.\n\n"
-    "Tap a button to begin."
+    "Type Change Case, Count Words, or Clean Text to begin."
 )
 
-MENU = ReplyKeyboardMarkup(
-    keyboard=[
-        [KeyboardButton(text=CHANGE_CASE)],
-        [KeyboardButton(text=COUNT_WORDS)],
-        [KeyboardButton(text=CLEAN_TEXT)],
-    ],
-    resize_keyboard=True,
-    input_field_placeholder="Choose a GK9 text tool",
-)
-
-# Upload the supplied welcome image to assets/welcome.jpg in this repository.
+# Welcome image uploaded to welcome.jpg in this repository.
 WELCOME_IMAGE = Path(__file__).resolve().parent / "welcome.jpg"
 SYARIKAT_WELCOME = (
     "💝✋👩👩‍💼✖️ 😏🙂‍↕️😰😥\n\n"
@@ -133,13 +123,14 @@ async def start(message: Message, state: FSMContext) -> None:
         await message.answer_photo(
             photo=FSInputFile(WELCOME_IMAGE),
             caption=SYARIKAT_WELCOME,
+            reply_markup=ReplyKeyboardRemove(),
         )
     else:
         logger.warning("Welcome image missing: %s", WELCOME_IMAGE)
-        await message.answer(SYARIKAT_WELCOME)
+        await message.answer(SYARIKAT_WELCOME, reply_markup=ReplyKeyboardRemove())
 
     # Second message: the four exact brand destinations requested.
-    await message.answer(SYARIKAT_BRANDS, reply_markup=MENU)
+    await message.answer(SYARIKAT_BRANDS)
 
 
 @router.message(Command("help"))
@@ -150,7 +141,6 @@ async def help_command(message: Message, state: FSMContext) -> None:
         + "\n\nAfter choosing a tool, send up to "
         + str(MAX_INPUT_LENGTH)
         + " characters. Use /cancel to return to the menu.",
-        reply_markup=MENU,
     )
 
 
@@ -158,15 +148,14 @@ async def help_command(message: Message, state: FSMContext) -> None:
 async def about_command(message: Message, state: FSMContext) -> None:
     await state.clear()
     await message.answer(
-        BOT_NAME + "\n" + BOT_ABOUT + "\n\nChoose a tool below to start.",
-        reply_markup=MENU,
+        BOT_NAME + "\n" + BOT_ABOUT + "\n\nType Change Case, Count Words, or Clean Text to start.",
     )
 
 
 @router.message(Command("cancel"))
 async def cancel(message: Message, state: FSMContext) -> None:
     await state.clear()
-    await message.answer("Tool cancelled. Choose a tool below.", reply_markup=MENU)
+    await message.answer("Tool cancelled. Type Change Case, Count Words, or Clean Text.")
 
 
 @router.message(F.text.in_(TOOLS))
@@ -181,37 +170,35 @@ async def choose_tool(message: Message, state: FSMContext) -> None:
     }
     await message.answer(
         prompts[tool] + "\n\nMaximum: " + str(MAX_INPUT_LENGTH) + " characters.",
-        reply_markup=MENU,
     )
 
 
 @router.message(WorkState.awaiting_text)
 async def handle_text(message: Message, state: FSMContext) -> None:
     if message.text is None:
-        await message.answer("Please send a text message to use this tool.", reply_markup=MENU)
+        await message.answer("Please send a text message to use this tool.")
         return
 
     if message.text.startswith("/"):
         await message.answer(
             "Unknown command. Send text, choose another tool, or use /cancel.",
-            reply_markup=MENU,
-        )
+            )
         return
 
     data = await state.get_data()
     tool = data.get("tool")
     if tool not in TOOLS:
         await state.clear()
-        await message.answer("Choose a tool below first.", reply_markup=MENU)
+        await message.answer("Type Change Case, Count Words, or Clean Text first.")
         return
 
     result = process_text(tool, message.text)
-    await message.answer(result, reply_markup=MENU)
+    await message.answer(result)
 
 
 @router.message()
 async def no_tool_selected(message: Message) -> None:
-    await message.answer("Choose one of the three text tools below to begin.", reply_markup=MENU)
+    await message.answer("Type Change Case, Count Words, or Clean Text to begin.")
 
 
 async def safely_apply(label: str, operation: Awaitable[bool]) -> None:
