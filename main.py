@@ -3,6 +3,7 @@
 import asyncio
 import logging
 import os
+from pathlib import Path
 from collections.abc import Awaitable, Callable
 from typing import TypeVar
 
@@ -19,7 +20,7 @@ from aiogram.filters import Command, CommandStart
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.fsm.storage.memory import MemoryStorage
-from aiogram.types import BotCommand, KeyboardButton, Message, ReplyKeyboardMarkup
+from aiogram.types import BotCommand, FSInputFile, KeyboardButton, Message, ReplyKeyboardMarkup
 
 from text_tools import MAX_INPUT_LENGTH, process_text
 
@@ -62,6 +63,30 @@ MENU = ReplyKeyboardMarkup(
     input_field_placeholder="Choose a GK9 text tool",
 )
 
+# Upload the supplied welcome image to assets/welcome.jpg in this repository.
+WELCOME_IMAGE = Path(__file__).resolve().parent / "assets" / "welcome.jpg"
+SYARIKAT_WELCOME = (
+    "💝✋👩👩‍💼✖️ 😏🙂‍↕️😰😥\n\n"
+    "WELCOME TO SYARIKAT MY\n\n"
+    "⚡️4 JENAMA • 1 KELUARGA\n"
+    "⚡️BERSATU BERSAMA 4DGANG\n"
+    "⚡️4 JENAMA • 1 DESTINASI\n"
+    "━━━━━━━━━━━━━━━━━━\n\n"
+    "⭐️ Kenali Jenama Kami & Terokai Lebih Banyak Pilihan!\n"
+    "⭐️ DI BAWAH NAUNGAN 4DGANG GROUP\n\n"
+    "⬇️ PILIH JENAMA KEGEMARAN ANDA DI BAWAH! ⬇️"
+)
+SYARIKAT_BRANDS = (
+    "MY.CASH88\n"
+    "https://mycash88.com/RFTELEGRAMADS\n\n"
+    "GK9\n"
+    "https://gk9gk9.com/RFTELEGRAMADS\n\n"
+    "LUCKYEGG88\n"
+    "https://luckyegg88.com/RFTELEGRAMADS\n\n"
+    "MAHKOTA8\n"
+    "https://mkt8.vip/RFTELEGRAMADS1"
+)
+
 router = Router()
 router.message.filter(F.chat.type == ChatType.PRIVATE)
 logger = logging.getLogger(__name__)
@@ -101,7 +126,20 @@ class WorkState(StatesGroup):
 @router.message(CommandStart())
 async def start(message: Message, state: FSMContext) -> None:
     await state.clear()
-    await message.answer(WELCOME, reply_markup=MENU)
+
+    # First message: welcome image and caption. If the image has not yet
+    # been uploaded to the repository, send the caption as text instead.
+    if WELCOME_IMAGE.is_file():
+        await message.answer_photo(
+            photo=FSInputFile(WELCOME_IMAGE),
+            caption=SYARIKAT_WELCOME,
+        )
+    else:
+        logger.warning("Welcome image missing: %s", WELCOME_IMAGE)
+        await message.answer(SYARIKAT_WELCOME)
+
+    # Second message: the four exact brand destinations requested.
+    await message.answer(SYARIKAT_BRANDS, reply_markup=MENU)
 
 
 @router.message(Command("help"))
