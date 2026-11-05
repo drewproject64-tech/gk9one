@@ -56,7 +56,6 @@ WELCOME = (
 # Welcome image uploaded to welcome.jpg in this repository.
 WELCOME_IMAGE = Path(__file__).resolve().parent / "welcome.jpg"
 SYARIKAT_WELCOME = (
-    "💝✋👩👩‍💼✖️ 😏🙂‍↕️😰😥\n\n"
     "WELCOME TO SYARIKAT MY\n\n"
     "⚡️4 JENAMA • 1 KELUARGA\n"
     "⚡️BERSATU BERSAMA 4DGANG\n"
