@@ -1,48 +1,37 @@
-# GK9 Text Tools
+# GK9 Telegram Bot
 
-Telegram bot: **@GK9Tool_BOT**. A genuine, link-free text utility with exactly three menu buttons.
+GK9 (@GK9Tool_BOT) offers two publicly accessible sections: **Text Tools** and **Games & Links**, which contains links to external gaming websites.
 
-## What it does
-1. **Change Case** — returns UPPERCASE, lowercase, and Title Case versions of submitted text.
-2. **Count Words** — counts words, characters (with and without whitespace), and lines.
-3. **Clean Text** — removes repeated whitespace and blank lines while keeping nonempty lines.
+Both sections remain available regardless of the administrator's preferred /start section. Every /start shows the featured content and an explicit menu for both sections.
 
-The bot works entirely within Telegram and uses no external APIs or websites for its text tools.
+## Public commands
 
-## Quick start
-Requires Python 3.12+.
+- /start: Show the featured section, then both available choices.
+- /tools: Change Case, Count Words, and Clean Text. Input limit: 1,200 characters.
+- /games: Open the SYARIKAT MY image, caption, and four external site buttons.
+- /help, /about, /cancel: User assistance and tool selection.
 
-1. Create the bot at [@BotFather](https://t.me/BotFather), and set its username to **GK9Tool_BOT**.
-2. Install dependencies: `pip install -r requirements.txt`
-3. Set the environment variable `BOT_TOKEN` to the bot token from BotFather. Never commit it to GitHub.
-4. Start: `python main.py`
-5. Open https://t.me/GK9Tool_BOT and send `/start`.
+## Admin controls
 
-The first successful launch updates the bot's **name**, **About** (short description), **Description**, and command menu through the official Telegram Bot API. Its username must be set in BotFather (and is verified at startup). A bot profile **photo** must also be set separately using BotFather.
+Set **ADMIN_ID** in Render to the administrator's numeric Telegram user ID. No admin access is granted if it is missing.
 
-## Commands and behavior
-- `/start`: welcome screen and the three-button keyboard.
-- `/help`: tool instructions.
-- `/about`: profile summary.
-- `/cancel`: clear the active tool and return to the menu.
+- /admin: Show REDIRECT, REVERSE, and Check Status buttons.
+- /redirect or REDIRECT: Feature Games & Links first for future /start requests.
+- /reverse or REVERSE: Feature Text Tools first for future /start requests.
 
-Choose one of the three buttons and send a text message. The selected tool keeps working on new messages until you choose another tool or cancel. Input is limited to 1,200 characters per message to keep responses safe for Telegram.
+This setting **does not hide or disable either section**, and switching modes **does not broadcast messages** to existing users.
 
-## Deploying on Render
-Use **New > Blueprint** with this repository's `render.yaml`, which defines a **Python background worker**. Set the `BOT_TOKEN` secret when prompted. A background worker is appropriate for long polling and does not need a public port. **Render background workers can require a paid plan**; review costs before creating the service.
+The preference is stored in SQLite at **GK9_MODE_DB_PATH**, default data/gk9_mode.sqlite3. For persistence across Render redeployments, use a persistent disk and set GK9_MODE_DB_PATH to a path on it (for example, /var/data/gk9_mode.sqlite3). Without a persistent disk, mode may reset to Text Tools after redeployment.
 
-Alternatively, create a Background Worker manually:
-- Build: `pip install -r requirements.txt`
-- Start: `python main.py`
-- Environment: `BOT_TOKEN=<BotFather token>`
+## Deploy and test
 
-Only run **one** instance of the bot per token; simultaneous polling instances can conflict. The Dockerfile is an alternate deployment option. Do not set a Telegram webhook for this polling-based bot.
+This is a Python 3.12 aiogram 3.x polling bot configured as a Render background worker.
 
-## Testing
-Run `python -m unittest discover -s tests -v`.
+1. Add BOT_TOKEN and ADMIN_ID as secret environment variables on Render.
+2. Optional: configure GK9_MODE_DB_PATH for persistent storage.
+3. Redeploy the latest GitHub commit.
+4. Run unit tests: python -m unittest discover -s tests -v
 
-## Security & limitations
-- Never put the real token in code, GitHub, or chat.
-- No redirects, gambling, payment features, advertising pushes, or forced joins.
-- Tool mode is stored in memory, so it resets on process restart. No user text is written to a database.
-- Telegram Ads approval is determined by Telegram; functioning code and matched ad text do not guarantee approval.
+The code deliberately does not update the bot's **name**, **username**, **About**, **short description**, or **description** in Telegram. Existing welcome image and four direct website URL buttons are preserved.
+
+Bot content and any Telegram ad copy must disclose both features, including external gaming links. Switching the featured section does not make gambling ads eligible for Telegram Ads; never use the switch to hide ad destinations during review.
